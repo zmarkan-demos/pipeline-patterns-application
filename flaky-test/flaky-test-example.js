@@ -11,7 +11,7 @@ describe("Flaky sample!", function() {
   //   });  
   // });
 
-  describe("A flakey test", () => {
+  describe("A flaky test", () => {
 
     it("works every time, 60% of the time", () => {
       let dice = Math.random()
