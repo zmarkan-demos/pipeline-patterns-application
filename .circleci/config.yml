@@ -87,6 +87,7 @@ jobs:
       - checkout
       - node/install-packages
       - snyk/scan:
+          severity-threshold: high
           fail-on-issues: true
           monitor-on-build: false
 
