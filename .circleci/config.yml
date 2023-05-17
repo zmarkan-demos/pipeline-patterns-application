@@ -5,6 +5,8 @@ orbs:
   docker: circleci/docker@2.1.1
   snyk: snyk/snyk@1.2.3
   terraform: circleci/terraform@3.0.0
+  aws-cli: circleci/aws-cli@3.1.4
+  aws-ecr: circleci/aws-ecr@8.2.1
 
 parameters:
   scheduled:
@@ -80,6 +82,42 @@ jobs:
             image: $DOCKER_LOGIN/$CIRCLE_PROJECT_REPONAME
             tag: 0.1.<< pipeline.number >>
   
+  build_and_publish_image_to_aws_ecr:
+    docker:
+      - image: cimg/aws:2022.06
+    steps:
+      - checkout
+      - setup_remote_docker
+      - aws-cli/setup:
+          role-arn: $AWS_OICD_ARN_VAR	
+          # optional parameters
+          profile-name: "OIDC-PROFILE"
+          role-session-name: circleci-aws-ecr-publish-job
+          session-duration: "1800"
+      - run:
+         name: Log-into-AWS-ECR
+         command: |
+           # must use same profile specified in the step above       
+           aws_ecr_pwd=$(aws ecr get-login-password --profile "OIDC-PROFILE")
+           echo $aws_ecr_pwd
+           echo "export DOCKER_PASSWORD=$aws_ecr_pwd" >> "$BASH_ENV"
+           source $BASH_ENV
+           echo "export AWS_DOCKER_LOGIN=AWS" >> "$BASH_ENV"
+           source $BASH_ENV
+           
+      - docker/check:
+          registry: $AWS_ECR_REGISTRY
+          docker-username: AWS_DOCKER_LOGIN
+      - docker/build:
+          image: cci-demo-cr
+          registry: $AWS_ECR_REGISTRY
+          tag: 0.1.<< pipeline.number >>
+      - docker/push:
+          image: cci-demo-cr
+          tag: 0.1.<< pipeline.number >>
+          registry: $AWS_ECR_REGISTRY
+
+
   dependency_vulnerability_scan:
     docker:
       - image: cimg/node:16.16.0
@@ -229,13 +267,17 @@ workflows:
         - dependency_vulnerability_scan:
             context:
               - CICD_WORKSHOP_SNYK
-        - build_docker_image:
-            context:
-              - CICD_WORKSHOP_DOCKER
-              - CICD_WORKSHOP_SNYK
+        - build_and_publish_image_to_aws_ecr:
+          requires:
+            - build-and-test
+            - dependency_vulnerability_scan
+        # - build_docker_image:
+        #     context:
+        #       - CICD_WORKSHOP_DOCKER
+        #       - CICD_WORKSHOP_SNYK
         - create_do_k8s_cluster:
             requires:
-              - build_docker_image
+              - build_and_publish_image_to_aws_ecr
             context:
               - CICD_WORKSHOP_DIGITAL_OCEAN
               - CICD_WORKSHOP_TERRAFORM_CLOUD
