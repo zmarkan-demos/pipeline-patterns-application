@@ -225,31 +225,27 @@ workflows:
           - not: << pipeline.parameters.scheduled >>
           - not: << pipeline.parameters.skip-run >>
       jobs:
-        - build_and_test:
-            matrix:
-              parameters:
-                node_version: ["16.16.0", "14.19.0", "17.6.0" ]
+        - build_and_test
         - dependency_vulnerability_scan:
             context:
-              - cicd-workshop
+              - CICD_WORKSHOP_SNYK
         - build_docker_image:
             context:
-              - cicd-workshop
+              - CICD_WORKSHOP_DOCKER
+              - CICD_WORKSHOP_SNYK
         - create_do_k8s_cluster:
             requires:
-              - dependency_vulnerability_scan
               - build_docker_image
-              - build_and_test
             context:
-              - cicd-workshop
-            filters:
-              branches:
-                only: main
+              - CICD_WORKSHOP_DIGITAL_OCEAN
+              - CICD_WORKSHOP_TERRAFORM_CLOUD
         - deploy_to_k8s:
             requires:
               - create_do_k8s_cluster
             context:
-              - cicd-workshop
+              - CICD_WORKSHOP_DOCKER
+              - CICD_WORKSHOP_DIGITAL_OCEAN
+              - CICD_WORKSHOP_TERRAFORM_CLOUD
         - smoketest_k8s_deployment:
             requires:
               - deploy_to_k8s
@@ -261,7 +257,8 @@ workflows:
             requires:
               - approve_destroy
             context:
-              - cicd-workshop
+              - CICD_WORKSHOP_DIGITAL_OCEAN
+              - CICD_WORKSHOP_TERRAFORM_CLOUD
 
   nightly-build:
     when: << pipeline.parameters.scheduled >>
@@ -272,8 +269,9 @@ workflows:
               node_version: ["16.16.0", "14.19.0", "17.6.0" ]
       - dependency_vulnerability_scan:
           context:   
-            - cicd-workshop
+            - CICD_WORKSHOP_SNYK
       - build_docker_image:
           context:
-            - cicd-workshop
+            - CICD_WORKSHOP_DOCKER
+            - CICD_WORKSHOP_SNYK
           
