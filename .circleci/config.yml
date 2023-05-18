@@ -154,7 +154,29 @@ jobs:
           command: |
             source /tmp/do_k8s/dok8s-endpoint
             ./test/smoke_test $ENDPOINT
+  
+  run_external_tests:
+    parameters:
+      org-name:
+        type: string
+        default: zmarkan-demos
+      project-name:
+        type: string
+        default: pipeline-patterns-external-tests
 
+    docker: 
+      - image: cimg/base:stable
+    steps:
+      - checkout
+      - run:
+          name: Triger pipeline across projects
+          command: |
+            curl --request POST \
+                --url https://circleci.com/api/v2/project/gh/<< parameters.org-name >>/<< parameters.project-name >>/pipeline \
+                --header "Circle-Token: $CIRCLECI_API_KEY" \
+                --header "content-type: application/json" \
+                --data '{"branch":"main","parameters":{"image-name":"'$DOCKER_LOGIN"/"$CIRCLE_PROJECT_REPONAME":"0.1.<< pipeline.number >>'"}}'
+              
   destroy_k8s_cluster:
     docker:
       - image: cimg/base:stable
@@ -254,10 +276,16 @@ workflows:
         - smoketest_k8s_deployment:
             requires:
               - deploy_to_k8s
+        - run_external_tests:
+            requires:
+              - deploy_to_k8s
+            context:
+              - circleci_api
         - approve_destroy:
             type: approval
             requires:
               - smoketest_k8s_deployment
+              - run_external_tests
         - destroy_k8s_cluster:
             requires:
               - approve_destroy
