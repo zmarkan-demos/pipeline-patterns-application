@@ -162,7 +162,7 @@ jobs:
         default: zmarkan-demos
       project-name:
         type: string
-        default: pipeline-patterns-external-tests
+        default: pipeline-patterns-consumer-tests
 
     docker: 
       - image: cimg/base:stable
