@@ -263,6 +263,8 @@ workflows:
         - create_do_k8s_cluster:
             requires:
               - build_docker_image
+              - dependency_vulnerability_scan
+              - build_and_test
             context:
               - CICD_WORKSHOP_DIGITAL_OCEAN
               - CICD_WORKSHOP_TERRAFORM_CLOUD
