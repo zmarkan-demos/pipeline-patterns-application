@@ -48,7 +48,7 @@ jobs:
       steps:
         - checkout
         - setup_remote_docker:
-            docker_layer_caching: false
+            docker_layer_caching: true
         - docker/check
         - docker/build:
             image: $DOCKER_LOGIN/$CIRCLE_PROJECT_REPONAME
